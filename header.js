@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         WME Roads Width Helper
 // @namespace    waze-it
-// @version      0.1
-// @description  Sets shortcut for quickly updating road widht data. Select a segment and use numbers to set the number of lanes.
+// @version      0.1.0
+// @description  Sets shortcuts for quickly updating road width data. Select a segment and use numbers to set the number of lanes.
 // @author       bedo2991 @ Waze
 // @require      https://craig.global.ssl.fastly.net/js/mousetrap/mousetrap.min.js
 // @supportURL   https://www.waze.com/forum/ucp.php?i=pm&mode=compose&u=4945632

@@ -1,4 +1,5 @@
 # WME Road Width Helper (WRWH)
+Script for the Waze Map Editor (WME) which sets shortcuts for quickly updating road width data.
 
 ## Instructions
 1. Select one or more **one-way** segments.
@@ -15,6 +16,9 @@ The first time you use a shortcut, a preference panel appears on the WME. There 
 You may change the numeric shortcuts in the WME's key shortcuts panel. Plus and minus can't be changed.
 
 ## LICENSE
-WRWH, originally by Francesco Bedini, is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+WME Road Width Helper (WRWH), originally by Francesco Bedini, is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 http://creativecommons.org/licenses/by-nc-sa/4.0/
-See the full list of authors on github: https://github.com/bedo2991/wme-road-width-helper
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+See the full list of authors on GitHub: https://github.com/bedo2991/wme-road-width-helper
