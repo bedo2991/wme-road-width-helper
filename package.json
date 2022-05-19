@@ -1,6 +1,6 @@
 {
   "name": "wme-road-width-helper",
-  "version": "0.1.0",
+  "version": "0.3.1",
   "description": "Sets shortcuts for quickly updating road width data. Select a segment and use numbers to set the number of lanes.",
   "main": "wrwh.user.js",
   "scripts": {
