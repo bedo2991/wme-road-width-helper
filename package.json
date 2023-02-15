@@ -1,15 +1,15 @@
 {
   "name": "wme-road-width-helper",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Sets shortcuts for quickly updating road width data. Select a segment and use numbers to set the number of lanes.",
   "main": "wrwh.user.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "compile": "npx google-closure-compiler --js=wrwh.user.js --js gcc-externs.js --js_output_file=install.user.js --compilation_level=ADVANCED_OPTIMIZATIONS",
     "compile-pp": "npx google-closure-compiler --formatting=pretty_print --js=wrwh.user.js --js gcc-externs.js --js_output_file=install.user.js --compilation_level=ADVANCED_OPTIMIZATIONS",
-    "concat": "cross-var concat -o releases\\release-$npm_package_version.user.js header.js install.user.js",
+    "concat": "cross-env concat -o releases\\release-%npm_package_version%.user.js header.js install.user.js",
     "build": "npm run compile && npm run concat",
-    "release": "cross-var replace-in-files --regex='\\d+\\.\\d+\\.\\d+' --replacement=$npm_package_version header.js && git add header.js && npm run build",
+    "release": "cross-env replace-in-files --regex='\\d+\\.\\d+\\.\\d+' --replacement=%npm_package_version% header.js && git add header.js && npm run build",
     "watch": "npm-watch"
   },
   "repository": {
