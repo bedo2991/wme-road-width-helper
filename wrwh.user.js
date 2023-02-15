@@ -4,7 +4,8 @@
   const WHATS_NEW = `<b>What's new?</b>
     <br>- 0.1.0 Initial release
     <br>- 0.1.1 Support for 2-way roads
-    <br>- 0.3.1 Bug Fixes, minor improvements`;
+    <br>- 0.3.1 Bug Fixes, minor improvements
+    <br>- 0.4.0 Use Waze's new script API`;
   const SCRIPT_ABBREVIATION = 'WRWH';
 
   let UpdateObject = null;
@@ -127,25 +128,24 @@
             left: 400px`;
       panelDiv.innerHTML = `<a id="${makeID(
         'close'
-      )}" class="close-panel"></a><h6 title="Version ${
-        GM_info.script.version
-      }">${GM_info.script.name.substring(4)}</h6>
+      )}" class="close-panel"></a><h6 title="Version ${GM_info.script.version
+        }">${GM_info.script.name.substring(4)}</h6>
             <label for="${makeID(
-              'laneWidth'
-            )}" title="If empty, it will use the default values set for your country. When set, the script uses the given values for all road types.">Width (in m)</label>
+          'laneWidth'
+        )}" title="If empty, it will use the default values set for your country. When set, the script uses the given values for all road types.">Width (in m)</label>
             <input type="number" id="${makeID(
-              'laneWidth'
-            )}" class="form-control" min="1.0" max="10" step="0.05" placeholder="WME's default"/><br>
+          'laneWidth'
+        )}" class="form-control" min="1.0" max="10" step="0.05" placeholder="WME's default"/><br>
             <div style="display:inline-block;"><label for="${makeID(
-              'apply_default'
-            )}" title="If checked, the current WME's default value is inserted into the lane width input, if the script width field is left empty.\nThis prevents it from being overwritten in the future if this value changes in your country.">Apply default value</label>&nbsp;&nbsp;<input type="checkbox" id="${makeID(
-        'apply_default'
-      )}" checked/></div>
+          'apply_default'
+        )}" title="If checked, the current WME's default value is inserted into the lane width input, if the script width field is left empty.\nThis prevents it from being overwritten in the future if this value changes in your country.">Apply default value</label>&nbsp;&nbsp;<input type="checkbox" id="${makeID(
+          'apply_default'
+        )}" checked/></div>
             <div style="display:inline-block;"><label for="${makeID(
-              'apply_default'
-            )}" title="If unchecked, confirmation alerts are not shown.">Display alerts</label>&nbsp;&nbsp;<input type="checkbox" id="${makeID(
-        'display_alerts'
-      )}" checked/></div>`;
+          'apply_default'
+        )}" title="If unchecked, confirmation alerts are not shown.">Display alerts</label>&nbsp;&nbsp;<input type="checkbox" id="${makeID(
+          'display_alerts'
+        )}" checked/></div>`;
       if (!W.map.getLayerByName('Street Vector Layer')) {
         panelDiv.innerHTML +=
           '<div style="color:red;">Street Vector Layer not found. <a href="https://github.com/bedo2991/svl/releases/latest/download/release.user.js" target="_blank">Please consider installing it</a> to see the roads width.</div>';
@@ -201,8 +201,8 @@
       displayPanel();
     }
     let selectedFeatures = W.selectionManager.getSelectedFeatures();
-    let selSegments = selectedFeatures.filter(f=>f.model.type==="segment");
-    if(selSegments.length === 0){
+    let selSegments = selectedFeatures.filter(f => f.model.type === "segment");
+    if (selSegments.length === 0) {
       return safeAlert(
         'warning',
         `You must select at least one segment, first`
@@ -216,26 +216,24 @@
       if (numberOfLanes === 0) {
         safeAlert(
           'warning',
-          `Removing (width-related) lanes from the selected segment(s).`
+          `Removing (width-related) lane(s) from the selected segment(s).`
         );
       } else {
         safeAlert(
           'info',
-          `Setting ${numberOfLanes} lanes on the selected segment(s).`
+          `Setting ${numberOfLanes} lane(s) on the selected segment(s).`
         );
       }
     }
-    for (let i = 0; i < selectedFeatures.length; i++) {
-      if (selectedFeatures[i].model.type === 'segment') {
-        if (numberOfLanes === 0) {
-          deleteLaneWidth(selectedFeatures[i].model);
-        } else {
-          applyLaneWidth(
-            selectedFeatures[i].model,
-            numberOfLanes > 0 ? numberOfLanes : null,
-            userWidthValue
-          );
-        }
+    for (let i = 0; i < selSegments.length; i++) {
+      if (numberOfLanes === 0) {
+        deleteLaneWidth(selSegments[i].model);
+      } else {
+        applyLaneWidth(
+          selSegments[i].model,
+          numberOfLanes > 0 ? numberOfLanes : null,
+          userWidthValue
+        );
       }
     }
   }
@@ -292,14 +290,14 @@
         laneWidthFwd =
           seg.attributes.fromLanesInfo?.laneWidth ??
           W.model.topCountry.defaultLaneWidthPerRoadType[
-            seg.attributes.roadType
+          seg.attributes.roadType
           ];
       }
       if (seg.attributes.revDirection) {
         laneWidthRev =
           seg.attributes.toLanesInfo?.laneWidth ??
           W.model.topCountry.defaultLaneWidthPerRoadType[
-            seg.attributes.roadType
+          seg.attributes.roadType
           ];
       }
     } else {
@@ -355,9 +353,9 @@
       };
       if (
         details.fromLanesInfo.numberOfLanes ===
-          seg.attributes.fromLanesInfo?.numberOfLanes &&
+        seg.attributes.fromLanesInfo?.numberOfLanes &&
         details.fromLanesInfo.laneWidth ===
-          seg.attributes.fromLanesInfo?.laneWidth
+        seg.attributes.fromLanesInfo?.laneWidth
       ) {
         //No changes
         noChanges++;
@@ -374,7 +372,7 @@
       };
       if (
         details.toLanesInfo.numberOfLanes ===
-          seg.attributes.toLanesInfo?.numberOfLanes &&
+        seg.attributes.toLanesInfo?.numberOfLanes &&
         details.toLanesInfo.laneWidth === seg.attributes.toLanesInfo?.laneWidth
       ) {
         //No changes
@@ -396,27 +394,16 @@
       console.dir(e);
     }
   }
-  function bootstrap(counter = 0) {
-    const MAX_ATTEMPTS = 15;
-    const RETRY_IN_MS = 1000;
-    if (W && typeof require === 'function') {
+
+  function newBootstrap() {
+    if (W?.userscripts?.state?.isReady) {
       init();
-    } else if (counter < MAX_ATTEMPTS) {
-      console.log(
-        `${
-          GM_info.script.name
-        }: attempt ${counter}/${MAX_ATTEMPTS} failed. Trying again in ${
-          RETRY_IN_MS / 1000
-        } second...`
-      );
-      setTimeout(() => {
-        bootstrap(++counter);
-      }, RETRY_IN_MS);
     } else {
-      console.error(
-        `Could not initialize ${GM_info.script.name} v. ${GM_info.script.version} :(`
-      );
+      document.addEventListener("wme-ready", init, {
+        once: true,
+      });
     }
   }
-  bootstrap();
+
+  newBootstrap();
 })();
