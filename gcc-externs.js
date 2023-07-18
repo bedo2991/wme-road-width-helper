@@ -172,6 +172,10 @@ const W = {
      * @returns {Array<*>}
      */
     'getSelectedFeatures': function () {},
+    /**
+     * @returns {{segments:Array<Waze.DataModel>}}
+     */
+    'getSegmentSelection': function () {},
   },
   'controller': {
     'reload': function () {},
