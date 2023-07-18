@@ -2,9 +2,8 @@
 
 (function wrwh() {
   const WHATS_NEW = `<b>What's new?</b>
-    <br>- 0.1.0 Initial release
-    <br>- 0.1.1 Support for 2-way roads
-    <br>- 0.3.1 Bug Fixes, minor improvements
+    <br>- 0.4.3 Fix due to new WME
+    <br>- 0.4.2 Fix what wasn't broken but will be soon
     <br>- 0.4.0 Use Waze's new script API`;
   const SCRIPT_ABBREVIATION = 'WRWH';
 
@@ -188,11 +187,9 @@
     if (!isPanelDisplayed()) {
       displayPanel();
     }
-    let selectedFeatures = W.selectionManager.getSelectedFeatures();
-    for (var i = 0; i < selectedFeatures.length; i++) {
-      if (selectedFeatures[i].model.type === 'segment') {
-        applyLaneWidth(selectedFeatures[i].model, null, increaseOrDecrease);
-      }
+    const segments = W.selectionManager.getSegmentSelection().segments;
+    for (var i = 0; i < segments.length; i++) {
+        applyLaneWidth(segments[i], null, increaseOrDecrease);
     }
   }
 
@@ -200,14 +197,14 @@
     if (!isPanelDisplayed()) {
       displayPanel();
     }
-    let selectedFeatures = W.selectionManager.getSelectedFeatures();
-    let selSegments = selectedFeatures.filter(f => f.model.type === "segment");
-    if (selSegments.length === 0) {
+    const segments = W.selectionManager.getSegmentSelection().segments;
+    if (segments.length === 0) {
       return safeAlert(
         'warning',
         `You must select at least one segment, first`
       );
     }
+
     let userWidthValue = document.getElementById(makeID('laneWidth')).value;
     if (!userWidthValue) {
       userWidthValue = null;
@@ -225,12 +222,12 @@
         );
       }
     }
-    for (let i = 0; i < selSegments.length; i++) {
+    for (let i = 0; i < segments.length; i++) {
       if (numberOfLanes === 0) {
-        deleteLaneWidth(selSegments[i].model);
+        deleteLaneWidth(segments[i]);
       } else {
         applyLaneWidth(
-          selSegments[i].model,
+          segments[i],
           numberOfLanes > 0 ? numberOfLanes : null,
           userWidthValue
         );
@@ -240,14 +237,14 @@
 
   function deleteLaneWidth(seg) {
     let details = {};
-    if (false && !seg.isOneWay()) {
-      console.log('Only one-way segments are currently supported.');
+    /*if (false && !seg.isOneWay()) {
+      //console.log('Only one-way segments are currently supported.');
       safeAlert(
         'warning',
         'Sorry, currently only one-way segments are supported.'
       );
       return;
-    }
+    }*/
     if (seg.attributes.fwdDirection) {
       details.fromLanesInfo = null;
     } else {
@@ -263,14 +260,14 @@
   }
 
   function applyLaneWidth(seg, numberOfLanes = null, laneWidthInMeters = null) {
-    if (false && !seg.isOneWay()) {
+    /*if (false && !seg.isOneWay()) {
       //console.log("Only one-way segments are currently supported.");
       safeAlert(
         'warning',
         'Sorry, currently only one-way segments are supported.'
       );
       return;
-    }
+    }*/
     var details = {};
     let laneWidthFwd = null;
     let laneWidthRev = null;
@@ -388,7 +385,7 @@
     //Apply changes
     try {
       W.model.actionManager.add(new UpdateObject(seg, details));
-      console.log('Details updated');
+      //console.log('Details updated');
     } catch (e) {
       console.log('Error! Could not update segment details');
       console.dir(e);

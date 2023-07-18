@@ -1,6 +1,6 @@
 {
   "name": "wme-road-width-helper",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "description": "Sets shortcuts for quickly updating road width data. Select a segment and use numbers to set the number of lanes.",
   "main": "wrwh.user.js",
   "scripts": {
@@ -31,7 +31,7 @@
   "homepage": "https://github.com/bedo2991/wme-road-width-helper#readme",
   "dependencies": {
     "concat": "^1.0.3",
-    "cross-var": "^1.1.0",
+    "cross-env": "^7.0.3",
     "google-closure-compiler": "^20210808.0.0",
     "replace-in-files-cli": "^1.0.0"
   }
