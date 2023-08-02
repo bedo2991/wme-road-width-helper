@@ -2,6 +2,7 @@
 
 (function wrwh() {
   const WHATS_NEW = `<b>What's new?</b>
+    <br>- 0.4.4 Fix due to new WME 2.180
     <br>- 0.4.3 Fix due to new WME
     <br>- 0.4.2 Fix what wasn't broken but will be soon
     <br>- 0.4.0 Use Waze's new script API`;
@@ -274,10 +275,10 @@
     //Check is segment already has a width value
     if (laneWidthInMeters === null) {
       if (seg.attributes.fwdDirection) {
-        laneWidthFwd = seg.attributes.fromLanesInfo?.laneWidth; // ?? W.model.topCountry.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+        laneWidthFwd = seg.attributes.fromLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
       }
       if (seg.attributes.revDirection) {
-        laneWidthRev = seg.attributes.toLanesInfo?.laneWidth; // ?? W.model.topCountry.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+        laneWidthRev = seg.attributes.toLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
       }
     } else if (
       laneWidthInMeters === INCREASE ||
@@ -286,14 +287,14 @@
       if (seg.attributes.fwdDirection) {
         laneWidthFwd =
           seg.attributes.fromLanesInfo?.laneWidth ??
-          W.model.topCountry.defaultLaneWidthPerRoadType[
+          W.model.topCountry.attributes.defaultLaneWidthPerRoadType[
           seg.attributes.roadType
           ];
       }
       if (seg.attributes.revDirection) {
         laneWidthRev =
           seg.attributes.toLanesInfo?.laneWidth ??
-          W.model.topCountry.defaultLaneWidthPerRoadType[
+          W.model.topCountry.attributes.defaultLaneWidthPerRoadType[
           seg.attributes.roadType
           ];
       }
@@ -329,14 +330,14 @@
     if (!applyDefault) {
       // if the value I want to apply is the same as the default, apply the default (providing null)
       laneWidthFwd =
-        W.model.topCountry.defaultLaneWidthPerRoadType[
+        W.model.topCountry.attributes.defaultLaneWidthPerRoadType[
           seg.attributes.roadType
         ] === laneWidthFwd
           ? null
           : laneWidthFwd;
     } else if (laneWidthFwd === null || typeof laneWidthFwd === 'undefined') {
       laneWidthFwd =
-        W.model.topCountry.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+        W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
     }
 
     let noChanges = 0;

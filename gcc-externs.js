@@ -228,6 +228,7 @@ const W = {
       'add': function (action) {},
     },
     'topCountry': {
+      'attributes':{
       /**@type{string} */
       'abbr': '',
       /**@type{string} */
@@ -235,7 +236,8 @@ const W = {
       /**@type{number} */
       'id': 0,
       /** @type{Object.<string, number>} */
-      'defaultLaneWidthPerRoadType': {},
+      'defaultLaneWidthPerRoadType': {}
+      }
     },
     'streets': {
       /** @type{Object.<number, StreetAttributes>} */
