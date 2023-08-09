@@ -177,6 +177,12 @@ const W = {
      */
     'getSegmentSelection': function () {},
   },
+  'editingMediator':{
+    'attributes':{
+      /**@type{boolean} */
+      'editingEnabled':true
+    }
+  },
   'controller': {
     'reload': function () {},
   },

@@ -2,6 +2,7 @@
 
 (function wrwh() {
   const WHATS_NEW = `<b>What's new?</b>
+    <br>- 0.4.5 Don't change roadwidth when editing is not enabled
     <br>- 0.4.4 Fix due to new WME 2.180
     <br>- 0.4.3 Fix due to new WME
     <br>- 0.4.2 Fix what wasn't broken but will be soon
@@ -195,6 +196,10 @@
   }
 
   function setLaneWidthOnSelectedSegments(numberOfLanes) {
+    // If the user can't currently edit (e.g. house numbers editing)
+    if(W.editingMediator.attributes.editingEnabled !== true)
+    return;
+
     if (!isPanelDisplayed()) {
       displayPanel();
     }
