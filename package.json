@@ -1,6 +1,6 @@
 {
   "name": "wme-road-width-helper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sets shortcuts for quickly updating road width data. Select a segment and use numbers to set the number of lanes.",
   "main": "wrwh.user.js",
   "scripts": {
@@ -31,7 +31,7 @@
     "@rollup/plugin-typescript": "^12.1.0",
     "tslib": "^2.7.0",
     "typescript": "^5.6.3",
-    "wme-sdk-typings": "https://web-assets.waze.com/wme_sdk_docs/production/latest/wme-sdk-typings.tgz"
+    "wme-sdk-typings": "https://web-assets.waze.com/wme_sdk_docs/beta/latest/wme-sdk-typings.tgz"
   },
   "dependencies": {
     "@types/tampermonkey": "^5.0.3",

@@ -1,8 +1,5 @@
 import { WmeSDK } from "wme-sdk-typings";
 
-
-
-
 (function wrwh() {
 
   // the sdk initScript function will be called after the SDK is initialized
@@ -20,11 +17,11 @@ import { WmeSDK } from "wme-sdk-typings";
       }
     )
     const WHATS_NEW = `<b>What's new?</b>
+    <br>- 1.0.1 Fix: 0 allows removing lanes-width information
     <br>- 1.0.0 Start using the new WME SDK
     <br>- 0.4.5 Don't change roadwidth when editing is not enabled`;
     const SCRIPT_ABBREVIATION = 'WRWH';
 
-    let UpdateObject = null;
     let panelDisplayed: (null | boolean) = null;
     //const panelID = Symbol.for("wme_roads_helper");
     const panelDiv = document.createElement('div');
@@ -116,8 +113,6 @@ import { WmeSDK } from "wme-sdk-typings";
     }
 
     function init() {
-      UpdateObject = require('Waze/Action/UpdateObject');
-
       initKeyboardShortcuts();
 
       waitForWazeWrap().then((result) => {
@@ -134,7 +129,7 @@ import { WmeSDK } from "wme-sdk-typings";
       return panelDisplayed !== null && panelDiv.style.display !== 'none';
     }
 
-    function makeID(name) {
+    function makeID(name: string): string {
       return `${SCRIPT_ABBREVIATION}_${name}`;
     }
 
@@ -204,9 +199,9 @@ import { WmeSDK } from "wme-sdk-typings";
       }
     }
 
-    function toggleApplyDefault(e) {
+    function toggleApplyDefault(e: Event) {
       const applyDefaultValue = document.getElementById(makeID('apply_default')) as HTMLInputElement;
-      if (e.target.value > 0) {
+      if (Number.parseInt((e.target as HTMLInputElement)?.value) > 0) {
         applyDefaultValue.setAttribute('disabled', 'disabled');
         applyDefaultValue.title =
           'Delete the manually entered width to use this checkbox';
@@ -220,9 +215,15 @@ import { WmeSDK } from "wme-sdk-typings";
       if (!isPanelDisplayed()) {
         displayPanel();
       }
-      const segments = W.selectionManager.getSegmentSelection().segments;
-      for (var i = 0; i < segments.length; i++) {
-        applyLaneWidth(segments[i], null, increaseOrDecrease);
+      const selection = wmeSDK.Editing.getSelection();
+      if (!selection || selection?.objectType !== "segment") {
+        return safeAlert(
+          'warning',
+          `You must select at least one segment, first`
+        );
+      }
+      for (var i = 0; i < selection.ids.length; i++) {
+        applyLaneWidthToSegment(selection.ids[i] as number, null, increaseOrDecrease);
       }
     }
 
@@ -236,7 +237,6 @@ import { WmeSDK } from "wme-sdk-typings";
       }
 
       const selection = wmeSDK.Editing.getSelection();
-      const segments = W.selectionManager.getSegmentSelection().segments;
       if (!selection || selection?.objectType !== "segment") {
         return safeAlert(
           'warning',
@@ -258,16 +258,16 @@ import { WmeSDK } from "wme-sdk-typings";
         } else {
           safeAlert(
             'info',
-            `Setting ${numberOfLanes} lane(s) on the selected segment(s).`
+            `Setting ${numberOfLanes} lane${numberOfLanes > 1 ? 's' : ''} on the selected segment${selection.ids.length > 1 ? 's' : ''}.`
           );
         }
       }
-      for (let i = 0; i < segments.length; i++) {
+      for (let i = 0; i < selection.ids.length; i++) {
         if (numberOfLanes === 0) {
-          deleteLaneWidth(segments[i]);
+          removeLaneWidthFromSegment(selection.ids[i] as number);
         } else {
-          applyLaneWidth(
-            segments[i],
+          applyLaneWidthToSegment(
+            selection.ids[i] as number,
             numberOfLanes > 0 ? numberOfLanes : null,
             userWidthValue
           );
@@ -275,161 +275,152 @@ import { WmeSDK } from "wme-sdk-typings";
       }
     }
 
-    function deleteLaneWidth(seg) {
-      let details = {};
-      /*if (false && !seg.isOneWay()) {
-        //console.log('Only one-way segments are currently supported.');
-        safeAlert(
-          'warning',
-          'Sorry, currently only one-way segments are supported.'
-        );
-        return;
-      }*/
-      if (seg.attributes.fwdDirection) {
-        details.fromLanesInfo = null;
-      } else {
-        details.toLanesInfo = null;
+    function removeLaneWidthFromSegment(segmId: number): boolean {
+      const segment = wmeSDK.DataModel.Segments.getById({ segmentId: segmId });
+      if (!segment) {
+        return false;
       }
+      const action: any = {
+        segmentId: segmId
+      };
+
+      if (segment.isAtoB || segment.isTwoWay) {
+        action.fromLanesInfo = null;
+      }
+      if (segment.isBtoA || segment.isTwoWay) {
+        action.toLanesInfo = null;
+      }
+
+      return performAction(action);
+    }
+
+    function performAction(action: any): boolean {
       try {
-        W.model.actionManager.add(new UpdateObject(seg, details));
-        //console.log("Details updated");
+        wmeSDK.DataModel.Segments.updateSegment(action);
+        return true;
       } catch (e) {
         console.log('Error! Could not update segment details');
         console.dir(e);
+        safeAlert("error", "Error! Could not update segment details");
+        return false;
       }
     }
 
-    function applyLaneWidth(seg, numberOfLanes: (number | null) = null, laneWidthInMeters: (null | number | string) = null) {
-      /*if (false && !seg.isOneWay()) {
-        //console.log("Only one-way segments are currently supported.");
-        safeAlert(
-          'warning',
-          'Sorry, currently only one-way segments are supported.'
-        );
-        return;
-      }*/
-      var details = {};
+    function applyLaneWidthToSegment(segId: number, numberOfLanes: (number | null) = null, laneWidthInMeters: (null | number | string) = null): boolean {
+      let details: Parameters<typeof wmeSDK.DataModel.Segments.updateSegment>[0] = {
+        segmentId: segId,
+      };
+
+
       let laneWidthFwd = null;
       let laneWidthRev = null;
+      const def: any = wmeSDK.DataModel.Countries.getTopCountry()?.defaultLaneWidthPerRoadType;
+      if (!def) return false;
       //Check is segment already has a width value
+      const segm = wmeSDK.DataModel.Segments.getById({ segmentId: segId });
+      console.dir(segm, "SEGMENT");
+      if (!segm) return false;
       if (laneWidthInMeters === null) {
-        if (seg.attributes.fwdDirection) {
-          laneWidthFwd = seg.attributes.fromLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+        if (segm.isAtoB) {
+          laneWidthFwd = segm.fromLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
         }
-        if (seg.attributes.revDirection) {
-          laneWidthRev = seg.attributes.toLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+        else if (segm.isBtoA) {
+          laneWidthRev = segm.toLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+        } else {
+          laneWidthFwd = segm.fromLanesInfo?.laneWidth;
+          laneWidthRev = segm.toLanesInfo?.laneWidth;
         }
       } else if (
         laneWidthInMeters === INCREASE ||
         laneWidthInMeters === DECREASE
       ) {
-        if (seg.attributes.fwdDirection) {
+        if (segm.isAtoB) {
           laneWidthFwd =
-            seg.attributes.fromLanesInfo?.laneWidth ??
-            W.model.topCountry.attributes.defaultLaneWidthPerRoadType[
-            seg.attributes.roadType
-            ];
+            segm.fromLanesInfo?.laneWidth ??
+            def[segm.roadType] / 100.0;
         }
-        if (seg.attributes.revDirection) {
+        else if (segm.isBtoA) {
           laneWidthRev =
-            seg.attributes.toLanesInfo?.laneWidth ??
-            W.model.topCountry.attributes.defaultLaneWidthPerRoadType[
-            seg.attributes.roadType
-            ];
+            segm.toLanesInfo?.laneWidth ??
+            def[segm.roadType] / 100.0;
+        } else {
+          laneWidthFwd =
+            segm.fromLanesInfo?.laneWidth ??
+            def[segm.roadType] / 100.0;
+          laneWidthRev =
+            segm.toLanesInfo?.laneWidth ??
+            def[segm.roadType] / 100.0;
         }
       } else {
-        if (seg.attributes.fwdDirection) {
+        if (typeof laneWidthInMeters === 'string') {
+          console.error('Invalid lane width value: ' + laneWidthInMeters);
+          return false;
+        }
+        if (segm.isAtoB) {
           laneWidthFwd = laneWidthInMeters * 100;
         }
-        if (seg.attributes.revDirection) {
+        else if (segm.isBtoA) {
+          laneWidthRev = laneWidthInMeters * 100;
+        } else {
+          laneWidthFwd = laneWidthInMeters * 100;
           laneWidthRev = laneWidthInMeters * 100;
         }
       }
 
       let delta = 0;
       if (laneWidthInMeters === INCREASE) {
-        delta = 10;
+        delta = 0.1;
       } else if (laneWidthInMeters === DECREASE) {
-        delta = -10;
+        delta = -0.1;
       }
 
       if (laneWidthInMeters === INCREASE || laneWidthInMeters === DECREASE) {
-        if (laneWidthFwd !== null) {
+        if (laneWidthFwd != null) {
           laneWidthFwd += delta;
         }
-        if (laneWidthRev !== null) {
+        if (laneWidthRev != null) {
           laneWidthRev += delta;
         }
       }
 
       // console.log(`Setting ${numberOfLanes} lanes ${laneWidth} m width.`);
-      const applyDefault = document.getElementById(
+      const applyDefault = (document.getElementById(
         makeID('apply_default')
-      ).checked;
+      ) as HTMLInputElement).checked;
       if (!applyDefault) {
         // if the value I want to apply is the same as the default, apply the default (providing null)
         laneWidthFwd =
-          W.model.topCountry.attributes.defaultLaneWidthPerRoadType[
-            seg.attributes.roadType
-          ] === laneWidthFwd
+          def[
+            segm.roadType
+          ] / 100.0 === laneWidthFwd
             ? null
             : laneWidthFwd;
-      } else if (laneWidthFwd === null || typeof laneWidthFwd === 'undefined') {
+      } else if (laneWidthFwd == null) {
         laneWidthFwd =
-          W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+          def[segm.roadType] / 100.0;
       }
 
-      let noChanges = 0;
-      if (seg.attributes.fwdDirection) {
+      if (!segm.isAtoB) {
         if (numberOfLanes === null) {
-          numberOfLanes = seg.attributes.fromLanesInfo?.numberOfLanes ?? 1;
-        }
-        details.fromLanesInfo = {
-          numberOfLanes: numberOfLanes,
-          laneWidth: laneWidthFwd,
-        };
-        if (
-          details.fromLanesInfo.numberOfLanes ===
-          seg.attributes.fromLanesInfo?.numberOfLanes &&
-          details.fromLanesInfo.laneWidth ===
-          seg.attributes.fromLanesInfo?.laneWidth
-        ) {
-          //No changes
-          noChanges++;
-        }
-      }
-
-      if (seg.attributes.revDirection) {
-        if (numberOfLanes === null) {
-          numberOfLanes = seg.attributes.toLanesInfo?.numberOfLanes ?? 1;
+          numberOfLanes = segm.toLanesInfo?.numberOfLanes ?? 1;
         }
         details.toLanesInfo = {
           numberOfLanes: numberOfLanes,
-          laneWidth: laneWidthRev,
+          laneWidth: laneWidthFwd ?? null, // TODO: only use one lane width instead of 2
         };
-        if (
-          details.toLanesInfo.numberOfLanes ===
-          seg.attributes.toLanesInfo?.numberOfLanes &&
-          details.toLanesInfo.laneWidth === seg.attributes.toLanesInfo?.laneWidth
-        ) {
-          //No changes
-          noChanges++;
-        }
       }
-
-      //Check if any change was applied
-      if (noChanges === 2 || (noChanges === 1 && seg.isOneWay())) {
-        return;
+      if (!segm.isBtoA) {
+        if (numberOfLanes === null) {
+          numberOfLanes = segm.fromLanesInfo?.numberOfLanes ?? 1;
+        }
+        details.fromLanesInfo = {
+          numberOfLanes: numberOfLanes,
+          laneWidth: laneWidthFwd ?? null,
+        };
       }
 
       //Apply changes
-      try {
-        W.model.actionManager.add(new UpdateObject(seg, details));
-        //console.log('Details updated');
-      } catch (e) {
-        console.log('Error! Could not update segment details');
-        console.dir(e);
-      }
+      return performAction(details);
     }
 
     init();
