@@ -17,6 +17,8 @@ import { WmeSDK } from "wme-sdk-typings";
       }
     )
     const WHATS_NEW = `<b>What's new?</b>
+    <br>- 1.1.0 Fix: Make the panel <a href="https://update.greasyfork.org/scripts/526924/WME%20Dark%20Mode.user.js" target="_blank">dark-mode</a> friendly.
+    <br>- &nbsp;&nbsp;&nbsp;Fix: The inserted lane width is now really applied to the segment.
     <br>- 1.0.1 Fix: 0 allows removing lanes-width information
     <br>- 1.0.0 Start using the new WME SDK
     <br>- 0.4.5 Don't change roadwidth when editing is not enabled`;
@@ -27,9 +29,15 @@ import { WmeSDK } from "wme-sdk-typings";
     const panelDiv = document.createElement('div');
     const INCREASE = '+';
     const DECREASE = '-';
-    const safeAlert = (level: string, message: string) => {
+    type AlertLevel = ('warning' | 'error' | 'success' | 'debug' | 'info');
+    const safeAlert = (level: AlertLevel, message: string) => {
       try {
-        WazeWrap.Alerts[level](GM_info.script.name, message);
+        if (level === 'info') {
+          WazeWrap.Alerts[level](GM_info.script.name, message, false, false);
+        }
+        else {
+          WazeWrap.Alerts[level](GM_info.script.name, message);
+        }
       } catch (e) {
         console.error(e);
         alert(message);
@@ -138,26 +146,28 @@ import { WmeSDK } from "wme-sdk-typings";
         //First time
         panelDiv.className = 'panel';
         panelDiv.style.cssText = `position: fixed;
-            opacity: 0.8;
+            opacity: 0.9;
             z-index: 100;
-            background: #fff;
+            background: var(--background_default);
             width: 220px;
-            border-radius: 5px;
-            border: 1px solid #000;
-            padding: 4px;
+            border-radius: var(--wz-dialog-border-radius, 10px);
+            border: 1px solid var(--content_default);
+            rgba(0, 0, 0, 0.26) 0px 4px 8px 3px;
+            padding: 0px 2px 2px 10px;
             cursor: auto;
             bottom: 10vh;
+            color: var(--content_default);
             left: 400px`;
         panelDiv.innerHTML = `<a id="${makeID(
           'close'
-        )}" class="close-panel"></a><h6 title="Version ${GM_info.script.version
+        )}" class="close-panel" style="top:10px;right:10px;"></a><h6 title="Version ${GM_info.script.version
           }">${GM_info.script.name.substring(4)}</h6>
             <label for="${makeID(
             'laneWidth'
           )}" title="If empty, it will use the default values set for your country. When set, the script uses the given values for all road types.">Width (in m)</label>
             <input type="number" id="${makeID(
             'laneWidth'
-          )}" class="form-control" min="1.0" max="10" step="0.05" placeholder="WME's default"/><br>
+          )}" class="form-control" min="2" max="15" step="0.05" placeholder="WME's default"/><br>
             <div style="display:inline-block;"><label for="${makeID(
             'apply_default'
           )}" title="If checked, the current WME's default value is inserted into the lane width input, if the script width field is left empty.\nThis prevents it from being overwritten in the future if this value changes in your country.">Apply default value</label>&nbsp;&nbsp;<input type="checkbox" id="${makeID(
@@ -169,13 +179,18 @@ import { WmeSDK } from "wme-sdk-typings";
             'display_alerts'
           )}" checked/></div>`;
         try {
-          if (!W.map.getLayerByName('Street Vector Layer')) {
+          wmeSDK.Map.getLayerZIndex({ layerName: 'Street Vector Layer' });
+        }
+        catch (ex: any) {
+          if (ex.name === "InvalidStateError") {
+            // This is the error that we expect, if the layer is not available.
+            // In this case, we show the user a message to install the Street Vector Layer script.
             panelDiv.innerHTML +=
               '<div style="color:red;">Street Vector Layer not found. <a href="https://github.com/bedo2991/svl/releases/latest/download/release.user.js" target="_blank">Please consider installing it</a> to see the roads width.</div>';
           }
-        }
-        catch (ex) {
-          console.error("Error checking for Street Vector Layer");
+          else {
+            console.error("Error checking for Street Vector Layer");
+          }
         }
         panelDiv.innerHTML += `<p><a href="${GM_info.script.supportURL}" target="_blank">${SCRIPT_ABBREVIATION} support forum</a></p>`;
         document.body.appendChild(panelDiv);
@@ -227,6 +242,14 @@ import { WmeSDK } from "wme-sdk-typings";
       }
     }
 
+    function stringToNumber(str: string): number | null {
+      const num = Number(str);
+      if (!isNaN(num) && !isNaN(parseFloat(str))) {
+        return num;
+      }
+      return null;
+    }
+
     function setLaneWidthOnSelectedSegments(numberOfLanes: number) {
       // If the user can't currently edit (e.g. house numbers editing)
       if (wmeSDK.Editing.isEditingHouseNumbers() || wmeSDK.Editing.isPracticeModeOn() || wmeSDK.Editing.isSnapshotModeOn())
@@ -244,8 +267,8 @@ import { WmeSDK } from "wme-sdk-typings";
         );
       }
 
-      let userWidthValue: (string | null) = (document
-        .getElementById(makeID('laneWidth')) as HTMLInputElement).value;
+      let userWidthValue: (number | null) = stringToNumber((document
+        .getElementById(makeID('laneWidth')) as HTMLInputElement).value);
       if (!userWidthValue) {
         userWidthValue = null;
       }
@@ -299,9 +322,9 @@ import { WmeSDK } from "wme-sdk-typings";
         wmeSDK.DataModel.Segments.updateSegment(action);
         return true;
       } catch (e) {
-        console.log('Error! Could not update segment details');
+        console.log('Error! Could not update segment details. Check that the lanes you are setting are between 2 and 15 meters.');
         console.dir(e);
-        safeAlert("error", "Error! Could not update segment details");
+        safeAlert("error", "Error! Could not update segment details. Check that the lanes you are setting are between 2 and 15 meters.");
         return false;
       }
     }
@@ -322,10 +345,10 @@ import { WmeSDK } from "wme-sdk-typings";
       if (!segm) return false;
       if (laneWidthInMeters === null) {
         if (segm.isAtoB) {
-          laneWidthFwd = segm.fromLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+          laneWidthFwd = segm.fromLanesInfo?.laneWidth;
         }
         else if (segm.isBtoA) {
-          laneWidthRev = segm.toLanesInfo?.laneWidth; // ?? W.model.topCountry.attributes.defaultLaneWidthPerRoadType[seg.attributes.roadType];
+          laneWidthRev = segm.toLanesInfo?.laneWidth;
         } else {
           laneWidthFwd = segm.fromLanesInfo?.laneWidth;
           laneWidthRev = segm.toLanesInfo?.laneWidth;
@@ -357,13 +380,13 @@ import { WmeSDK } from "wme-sdk-typings";
           return false;
         }
         if (segm.isAtoB) {
-          laneWidthFwd = laneWidthInMeters * 100;
+          laneWidthFwd = laneWidthInMeters;
         }
         else if (segm.isBtoA) {
-          laneWidthRev = laneWidthInMeters * 100;
+          laneWidthRev = laneWidthInMeters;
         } else {
-          laneWidthFwd = laneWidthInMeters * 100;
-          laneWidthRev = laneWidthInMeters * 100;
+          laneWidthFwd = laneWidthInMeters;
+          laneWidthRev = laneWidthInMeters;
         }
       }
 
