@@ -6,6 +6,8 @@ import { WmeSDK } from "wme-sdk-typings";
   window.SDK_INITIALIZED.then(initScript);
   function initScript() {
 
+    let svlDetected = false;
+
     if (!window.getWmeSdk) {
       // This block is required for type checking, but it is guaranteed that the function exists.
       throw new Error("SDK not available");
@@ -17,11 +19,9 @@ import { WmeSDK } from "wme-sdk-typings";
       }
     )
     const WHATS_NEW = `<b>What's new?</b>
+    <br>- 1.1.1 Fix: Increase/decrease lane width was not working as expected on B to A segments. Fix: SVL can now be detected properly.
     <br>- 1.1.0 Fix: Make the panel <a href="https://update.greasyfork.org/scripts/526924/WME%20Dark%20Mode.user.js" target="_blank">dark-mode</a> friendly.
-    <br>- &nbsp;&nbsp;&nbsp;Fix: The inserted lane width is now really applied to the segment.
-    <br>- 1.0.1 Fix: 0 allows removing lanes-width information
-    <br>- 1.0.0 Start using the new WME SDK
-    <br>- 0.4.5 Don't change roadwidth when editing is not enabled`;
+    <br>- &nbsp;&nbsp;&nbsp;Fix: The inserted lane width is now really applied to the segment.`;
     const SCRIPT_ABBREVIATION = 'WRWH';
 
     let panelDisplayed: (null | boolean) = null;
@@ -130,6 +130,16 @@ import { WmeSDK } from "wme-sdk-typings";
       });
 
 
+      if (document.svlInitialized) {
+        svlDetected = true;
+      } else {
+        document.addEventListener('svl-initialized', (event) => {
+          svlDetected = true;
+          // Perform actions that require Script 1's existence
+        });
+      }
+
+
       console.log(`${GM_info.script.name}: init completed`);
     }
 
@@ -178,19 +188,11 @@ import { WmeSDK } from "wme-sdk-typings";
           )}" title="If unchecked, confirmation alerts are not shown.">Display alerts</label>&nbsp;&nbsp;<input type="checkbox" id="${makeID(
             'display_alerts'
           )}" checked/></div>`;
-        try {
-          wmeSDK.Map.getLayerZIndex({ layerName: 'Street Vector Layer' });
-        }
-        catch (ex: any) {
-          if (ex.name === "InvalidStateError") {
-            // This is the error that we expect, if the layer is not available.
-            // In this case, we show the user a message to install the Street Vector Layer script.
-            panelDiv.innerHTML +=
-              '<div style="color:red;">Street Vector Layer not found. <a href="https://github.com/bedo2991/svl/releases/latest/download/release.user.js" target="_blank">Please consider installing it</a> to see the roads width.</div>';
-          }
-          else {
-            console.error("Error checking for Street Vector Layer");
-          }
+        if (!svlDetected) {
+          // This is the error that we expect, if the layer is not available.
+          // In this case, we show the user a message to install the Street Vector Layer script.
+          panelDiv.innerHTML +=
+            '<div style="color:red;">Street Vector Layer not found. <a href="https://github.com/bedo2991/svl/releases/latest/download/release.user.js" target="_blank">Please consider installing it</a> to see the roads width.</div>';
         }
         panelDiv.innerHTML += `<p><a href="${GM_info.script.supportURL}" target="_blank">${SCRIPT_ABBREVIATION} support forum</a></p>`;
         document.body.appendChild(panelDiv);
@@ -252,7 +254,7 @@ import { WmeSDK } from "wme-sdk-typings";
 
     function setLaneWidthOnSelectedSegments(numberOfLanes: number) {
       // If the user can't currently edit (e.g. house numbers editing)
-      if (wmeSDK.Editing.isEditingHouseNumbers() || wmeSDK.Editing.isPracticeModeOn() || wmeSDK.Editing.isSnapshotModeOn())
+      if (wmeSDK.Editing.isEditingAllowed() === false)
         return;
 
       if (!isPanelDisplayed()) {
@@ -334,7 +336,6 @@ import { WmeSDK } from "wme-sdk-typings";
         segmentId: segId,
       };
 
-
       let laneWidthFwd = null;
       let laneWidthRev = null;
       const def: any = wmeSDK.DataModel.Countries.getTopCountry()?.defaultLaneWidthPerRoadType;
@@ -405,8 +406,9 @@ import { WmeSDK } from "wme-sdk-typings";
           laneWidthRev += delta;
         }
       }
-
+      debugger;
       // console.log(`Setting ${numberOfLanes} lanes ${laneWidth} m width.`);
+
       const applyDefault = (document.getElementById(
         makeID('apply_default')
       ) as HTMLInputElement).checked;
@@ -421,18 +423,21 @@ import { WmeSDK } from "wme-sdk-typings";
       } else if (laneWidthFwd == null) {
         laneWidthFwd =
           def[segm.roadType] / 100.0;
+      } else if (laneWidthRev == null) {
+        laneWidthRev =
+          def[segm.roadType] / 100.0;
       }
 
-      if (!segm.isAtoB) {
+      if (segm.isBtoA || segm.isTwoWay) {
         if (numberOfLanes === null) {
           numberOfLanes = segm.toLanesInfo?.numberOfLanes ?? 1;
         }
         details.toLanesInfo = {
           numberOfLanes: numberOfLanes,
-          laneWidth: laneWidthFwd ?? null, // TODO: only use one lane width instead of 2
+          laneWidth: laneWidthRev ?? null, // TODO: only use one lane width instead of 2
         };
       }
-      if (!segm.isBtoA) {
+      if (segm.isAtoB || segm.isTwoWay) {
         if (numberOfLanes === null) {
           numberOfLanes = segm.fromLanesInfo?.numberOfLanes ?? 1;
         }
